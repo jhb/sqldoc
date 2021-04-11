@@ -1,18 +1,19 @@
 import itertools
 import uuid
+from datetime import datetime
 
 import mariadb
 from dateutil.parser import parse
 
 
-def flatten_keys(obj, delimeter='.', path=""):
+def flatten_obj(obj, delimeter='.', path=""):
     if isinstance(obj, dict):
         for k, v in obj.items():
-            yield from flatten_keys(v, delimeter, path + delimeter + k if path else k)
+            yield from flatten_obj(v, delimeter, path + delimeter + k if path else k)
     elif isinstance(obj, (list, tuple)):
         for i, v in enumerate(obj):
             s = str(i)
-            yield from flatten_keys(v, delimeter, path + delimeter + s if path else s)
+            yield from flatten_obj(v, delimeter, path + delimeter + s if path else s)
     else:
         yield path, obj
 
@@ -96,7 +97,7 @@ class Sqldoc:
             oid = uuid.uuid4().hex
         rows = []
         data = []
-        for key, value in itertools.chain(flatten_keys(obj), (('_oid', oid),)):
+        for key, value in itertools.chain(flatten_obj(obj), (('_oid', oid),)):
             row = {'oid':  oid,
                    'path': key,
                    'rev':  '.'.join(reversed(key.split('.'))),
@@ -141,7 +142,8 @@ if __name__ == '__main__':
                                     "y": "this is some text"
                             },
                     ],
-                    "g": (1, 2, 3)
+                    "g": (1, 2, 3),
+                    "h": datetime.now()
             }
     }
 

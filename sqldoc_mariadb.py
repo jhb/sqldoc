@@ -1,21 +1,21 @@
-import math
-import random
-from dateutil.parser import parse
-import uuid
 import itertools
+import uuid
+
 import mariadb
+from dateutil.parser import parse
 
 
-def walk_keys(obj, delimeter='.',path = ""):
+def flatten_keys(obj, delimeter='.', path=""):
     if isinstance(obj, dict):
         for k, v in obj.items():
-            yield from walk_keys(v, delimeter,path + delimeter + k if path else k)
+            yield from flatten_keys(v, delimeter, path + delimeter + k if path else k)
     elif isinstance(obj, (list, tuple)):
         for i, v in enumerate(obj):
             s = str(i)
-            yield from walk_keys(v, delimeter, path + delimeter+s if path else s)
+            yield from flatten_keys(v, delimeter, path + delimeter + s if path else s)
     else:
-        yield path,obj
+        yield path, obj
+
 
 class Sqldoc:
 
@@ -25,12 +25,12 @@ class Sqldoc:
         if do_setup:
             self.setup_tables()
 
-        self.to_sql_map = dict( str=str,
-                                int=int,
-                                float=float,
-                                dt=parse,
-                                text=str,
-                                blob=self.to_blob)
+        self.to_sql_map = dict(str=str,
+                               int=int,
+                               float=float,
+                               dt=parse,
+                               text=str,
+                               blob=self.to_blob)
 
     def commit(self):
         self.conn.commit()
@@ -50,14 +50,13 @@ class Sqldoc:
                    `path`  varchar(256) not null,
                    `rev`   varchar(256) not null,
                    `name`   varchar(256) not null,
+                    `type` char,
                    `str` varchar(256),
                    `int` integer,
                    `float` float,
                    `dt` datetime,
                    `text` text,
-                   `blob` blob,
-                   `type` char
-   
+                   `blob` blob
                     );""",
 
         ]
@@ -83,8 +82,8 @@ class Sqldoc:
         for s in finish:
             cur.execute(s)
 
-    def to_blob(self,value):
-        if len(value)>1024:
+    def to_blob(self, value):
+        if len(value) > 1024:
             return value
         else:
             return None
@@ -92,38 +91,30 @@ class Sqldoc:
     def to_sql(self):
         return
 
-    def store_obj(self,obj,oid=None):
+    def store_obj(self, obj, oid=None):
         if oid is None:
             oid = uuid.uuid4().hex
         rows = []
         data = []
-        for key,value in itertools.chain(walk_keys(obj),(('_oid',oid),)):
-            row = {'oid': oid,
+        for key, value in itertools.chain(flatten_keys(obj), (('_oid', oid),)):
+            row = {'oid':  oid,
                    'path': key,
-                   'rev': '.'.join(reversed(key.split('.'))),
-                   'name': key.split('.')[-1]}
-            for fname,f in self.to_sql_map.items():
+                   'rev':  '.'.join(reversed(key.split('.'))),
+                   'name': key.split('.')[-1],
+                   'type': str(type(value))[8]}
+            for fname, f in self.to_sql_map.items():
                 try:
                     v = f(value)
                 except (ValueError, TypeError):
                     v = None
-                row[fname]=v
-            row['type'] = str(type(value))[8]
+                row[fname] = v
             rows.append(row)
             data.append(tuple(row.values()))
         cur = self.cursor()
         cur.executemany("insert into search values (null, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s);", data)
 
 
-
-
-
-
-
-
-
 if __name__ == '__main__':
-
     conn = mariadb.connect(
             user="sqldoc",
             password="sqldoc",
@@ -132,67 +123,27 @@ if __name__ == '__main__':
 
             port=3306)
 
-    sqldoc = Sqldoc(conn,True)
+    sqldoc = Sqldoc(conn, True)
 
     obj = {
-        "a": "one",
-        "b": 2,
-        "c": {
-            "d": "three",
-            "e": 4.0,
-            "f": [
-                {
-                    "x": "five",
-                    "y": '2021-02-01 10:00:00'
-                },
-                {
-                    "x": "six",
-                    "y": "this is some text"
-                },
-            ],
-            "g":(1,2,3)
-        }
+            "a": "one",
+            "b": 2,
+            "c": {
+                    "d": "three",
+                    "e": 4.0,
+                    "f": [
+                            {
+                                    "x": "five",
+                                    "y": '2021-02-01 10:00:00'
+                            },
+                            {
+                                    "x": "six",
+                                    "y": "this is some text"
+                            },
+                    ],
+                    "g": (1, 2, 3)
+            }
     }
 
     sqldoc.store_obj(obj)
     sqldoc.commit()
-
-
-
-
-
-
-
-
-
-
-
-
-
-# cur = sqldoc.cursor()
-#
-# nums = '012345789'
-# chars = 'abcdefghijklmnopqrstuvwxyz'
-#
-# # n = 10_000_000
-# n = 10000
-#
-# for i in range(n):
-#     data = []
-#     elements = [random.choice(chars)]
-#     elements.extend(random.choices(chars, k=random.randint(0, 6)))
-#     path = '.'.join(elements)
-#     rev = '.'.join(reversed(elements))
-#     key = path[-1]
-#     val = ''.join(random.choices(chars + '   ', k=random.randint(5, 60)))
-#     docid = 'doc%s' % random.randint(1, math.ceil(n / 10))
-#     data.append((docid, path, rev, key, val, val))
-#     if (i % 10000 == 0):
-#         print(i)
-#
-#     cur.executemany("insert into search values (null,%s,%s,%s,%s,%s,null, null, null, %s, 's');", data)
-# if data:
-#     cur.executemany("insert into search values (null,%s,%s,%s,%s,%s,null, null, null, %s, 's');", data)
-#
-
-conn.commit()

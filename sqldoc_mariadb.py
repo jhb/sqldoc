@@ -1,22 +1,12 @@
 import itertools
 import uuid
 from datetime import datetime
+from pprint import pprint
 
 import mariadb
 from dateutil.parser import parse
-
-
-def flatten_obj(obj, delimeter='.', path=""):
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            yield from flatten_obj(v, delimeter, path + delimeter + k if path else k)
-    elif isinstance(obj, (list, tuple)):
-        for i, v in enumerate(obj):
-            s = str(i)
-            yield from flatten_obj(v, delimeter, path + delimeter + s if path else s)
-    else:
-        yield path, obj
-
+import dateutil
+from objectkeys import flatten_obj, assemble_obj
 
 class Sqldoc:
 
@@ -33,11 +23,18 @@ class Sqldoc:
                                text=str,
                                blob=self.to_blob)
 
+        self.from_sql_map = dict(s = 'str',
+                                 i = 'int',
+                                 f = 'float',
+                                 d = 'dt',
+                                 t = 't',
+                                 b = 'blob')
+
     def commit(self):
         self.conn.commit()
 
-    def cursor(self):
-        return self.conn.cursor()
+    def cursor(self, *args, **kwargs):
+        return self.conn.cursor(*args, **kwargs)
 
     def setup_tables(self):
         setup = [
@@ -113,6 +110,20 @@ class Sqldoc:
             data.append(tuple(row.values()))
         cur = self.cursor()
         cur.executemany("insert into search values (null, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s);", data)
+        newobj = dict(obj)
+        newobj['_oid']=oid
+        return oid,newobj
+
+    def read_obj(self,oid):
+        cur = self.cursor(dictionary=True)
+        cur.execute("select * from search where oid=%s", (oid,))
+        items = []
+        for row in cur.fetchall():
+            colname = self.from_sql_map.get(row['type'],'str')
+            value = row[colname]
+            items.append((row['path'],row[colname]))
+        obj = assemble_obj(items)
+        return obj
 
 
 if __name__ == '__main__':
@@ -142,10 +153,12 @@ if __name__ == '__main__':
                                     "y": "this is some text"
                             },
                     ],
-                    "g": (1, 2, 3),
-                    "h": datetime.now()
+                    "g": [1, 2, 3],
+                    "h": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
     }
 
-    sqldoc.store_obj(obj)
+    oid, obj1 = sqldoc.store_obj(obj)
     sqldoc.commit()
+    obj2 = sqldoc.read_obj(oid)
+    assert obj2==obj1

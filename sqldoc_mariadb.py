@@ -20,7 +20,7 @@ class Sqldoc:
         self.to_sql_map = dict(str=str,
                                int=int,
                                float=float,
-                               dt=parse,
+                               dt=self.to_datetime,
                                text=str,
                                blob=self.to_blob)
 
@@ -53,7 +53,7 @@ class Sqldoc:
                    `str` varchar(256),
                    `int` integer,
                    `float` float,
-                   `dt` datetime,
+                   `dt` datetime(6),
                    `text` text,
                    `blob` blob
                     );""",
@@ -90,16 +90,21 @@ class Sqldoc:
     def to_sql(self):
         return
 
+    def to_datetime(self, value):
+        if type(value) is datetime:
+            return value
+        else:
+            return parse(value)
+
     def store_doc(self, doc, docid=None):
         doc = dict(doc)
 
         if docid is None:
             docid = doc.get('_docid', uuid.uuid4().hex)
         doc['_docid'] = docid
-
         rows = []
         data = []
-        for key, value in itertools.chain(flatten_doc(doc), (('_docid', docid),)):
+        for key, value in flatten_doc(doc):
             row = {'docid':  docid,
                    'path': key,
                    'rev':  '.'.join(reversed(key.split('.'))),
@@ -177,13 +182,16 @@ if __name__ == '__main__':
                             },
                     ],
                     "g": [1, 2, 3],
-                    "h": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                    "h": datetime.now()
             }
     }
 
     docid, doc1 = sqldoc.store_doc(doc)
+    sqldoc.commit()
 
     doc2 = sqldoc.read_doc(docid)
+    pprint(doc1)
+    pprint(doc2)
     assert doc2 == doc1
     doc2['foo'] = 'bar'
     doc3 = sqldoc.update_doc(doc2)

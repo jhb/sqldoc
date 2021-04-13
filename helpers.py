@@ -1,3 +1,5 @@
+import re
+
 def flatten_obj(obj, delimeter='.',path = ""):
     if isinstance(obj, dict):
         for k, v in obj.items():
@@ -50,6 +52,32 @@ def assemble_obj(items, delimeter='.'):
 
 
 
+def prepare_sql(fragment, tablename='search'):
+    indent = ' ' * 8
+    fragment = fragment.strip()
+    fragment = '\n'.join(indent + f.strip() for f in fragment.split('\n'))
+    fragment = fragment[len(indent):]
+    parts = re.findall(r'''(\w+)\.(\w+)(\W)''', fragment)
+    names = sorted(list({p[0] for p in parts}))
+
+    tables = f',\n{indent}'.join([f'{tablename} as {n}' for n in names])
+
+    sql = f"""
+    select 
+        distinct {names[0]}.oid
+    from
+        {tables}
+    where
+        {fragment}"""
+
+    if len(names) > 1:
+        _ = [f'{name}.oid = {names[i + 1]}.oid' for i, name in enumerate(names[:-1])]
+        where = ' and \n    '.join(_)
+        sql += f' and\n{indent}' + where
+    sql = '\n'.join(l[4:] for l in sql.split('\n'))
+    return sql
+
+
 
 if __name__ == '__main__':
     from pprint import pprint
@@ -74,3 +102,14 @@ if __name__ == '__main__':
     }
     db = flatten_obj(obj,'.')
     pprint(assemble_obj(db)==obj)
+
+    part = """
+        s1.path='b' and
+        s1.str='2' and
+        s2.path='a' and
+        s2.str='one'
+    
+    """
+
+    sql = prepare_sql(part)
+    print(sql)

@@ -64,14 +64,14 @@ def prepare_sql(fragment, tablename='search'):
 
     sql = f"""
     select 
-        distinct {names[0]}.oid
+        distinct {names[0]}.docid
     from
         {tables}
     where
         {fragment}"""
 
     if len(names) > 1:
-        _ = [f'{name}.oid = {names[i + 1]}.oid' for i, name in enumerate(names[:-1])]
+        _ = [f'{name}.docid = {names[i + 1]}.docid' for i, name in enumerate(names[:-1])]
         where = ' and \n    '.join(_)
         sql += f' and\n{indent}' + where
     sql = '\n'.join(l[4:] for l in sql.split('\n'))

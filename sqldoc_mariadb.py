@@ -45,7 +45,7 @@ class Sqldoc:
                 create table search
                 (
                    `id`    integer primary key auto_increment,
-                   `oid` varchar(256) not null,
+                   `docid` varchar(256) not null,
                    `path`  varchar(256) not null,
                    `rev`   varchar(256) not null,
                    `name`   varchar(256) not null,
@@ -65,7 +65,7 @@ class Sqldoc:
 
     def setup_indexes(self):
         finish = [
-                "create index if not exists `oid` on search(`oid`);",
+                "create index if not exists `docid` on search(`docid`);",
                 "create index if not exists `path` on search (`path`);",
                 "create index if not exists `rev` on search (`rev`);",
                 "create index if not exists `name` on search (`name`);",
@@ -90,17 +90,17 @@ class Sqldoc:
     def to_sql(self):
         return
 
-    def store_doc(self, doc, oid=None):
+    def store_doc(self, doc, docid=None):
         doc = dict(doc)
 
-        if oid is None:
-            oid = doc.get('_oid', uuid.uuid4().hex)
-        doc['_oid'] = oid
+        if docid is None:
+            docid = doc.get('_docid', uuid.uuid4().hex)
+        doc['_docid'] = docid
 
         rows = []
         data = []
-        for key, value in itertools.chain(flatten_doc(doc), (('_oid', oid),)):
-            row = {'oid':  oid,
+        for key, value in itertools.chain(flatten_doc(doc), (('_docid', docid),)):
+            row = {'docid':  docid,
                    'path': key,
                    'rev':  '.'.join(reversed(key.split('.'))),
                    'name': key.split('.')[-1],
@@ -115,11 +115,11 @@ class Sqldoc:
             data.append(tuple(row.values()))
         cur = self.cursor()
         cur.executemany("insert into search values (null, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s);", data)
-        return oid, doc
+        return docid, doc
 
-    def read_doc(self, oid):
+    def read_doc(self, docid):
         cur = self.cursor(dictionary=True)
-        cur.execute("select * from search where oid=%s", (oid,))
+        cur.execute("select * from search where docid=%s", (docid,))
         items = []
         for row in cur.fetchall():
             colname = self.from_sql_map.get(row['type'], 'str')
@@ -127,24 +127,24 @@ class Sqldoc:
             items.append((row['path'], value))
         return assemble_doc(items)
 
-    def del_doc(self, oid):
+    def del_doc(self, docid):
         cur = self.cursor()
-        cur.execute("delete from search where oid=%s", (oid,))
+        cur.execute("delete from search where docid=%s", (docid,))
 
     def update_doc(self, doc):
-        oid = doc['_oid']
-        self.del_doc(oid)
+        docid = doc['_docid']
+        self.del_doc(docid)
         return self.store_doc(doc)
 
-    def query_oids(self, fragment):
+    def query_docids(self, fragment):
         sql = prepare_sql(fragment)
         cur = self.cursor()
         cur.execute(sql)
         return [r[0] for r in cur.fetchall()]
 
     def query_docs(self, fragment):
-        oids = self.query_oids(fragment)
-        return [self.read_doc(oid) for oid in oids]
+        docids = self.query_docids(fragment)
+        return [self.read_doc(docid) for docid in docids]
 
 
 
@@ -181,16 +181,16 @@ if __name__ == '__main__':
             }
     }
 
-    oid, doc1 = sqldoc.store_doc(doc)
+    docid, doc1 = sqldoc.store_doc(doc)
 
-    doc2 = sqldoc.read_doc(oid)
+    doc2 = sqldoc.read_doc(docid)
     assert doc2 == doc1
     doc2['foo'] = 'bar'
     doc3 = sqldoc.update_doc(doc2)
     pprint(doc3)
 
-    oid2 = sqldoc.query_oids('x.path="a"')
-    pprint(oid2)
+    docid2 = sqldoc.query_docids('x.path="a"')
+    pprint(docid2)
 
     pprint(sqldoc.query_docs('a1.name="h"'))
 

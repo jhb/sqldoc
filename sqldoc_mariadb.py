@@ -6,7 +6,7 @@ from pprint import pprint
 import mariadb
 from dateutil.parser import parse
 
-from helpers import flatten_obj, assemble_obj, prepare_sql
+from helpers import flatten_doc, assemble_doc, prepare_sql
 
 
 class Sqldoc:
@@ -90,16 +90,16 @@ class Sqldoc:
     def to_sql(self):
         return
 
-    def store_obj(self, obj, oid=None):
-        obj = dict(obj)
+    def store_doc(self, doc, oid=None):
+        doc = dict(doc)
 
         if oid is None:
-            oid = obj.get('_oid',uuid.uuid4().hex)
-        obj['_oid']=oid
+            oid = doc.get('_oid', uuid.uuid4().hex)
+        doc['_oid'] = oid
 
         rows = []
         data = []
-        for key, value in itertools.chain(flatten_obj(obj), (('_oid', oid),)):
+        for key, value in itertools.chain(flatten_doc(doc), (('_oid', oid),)):
             row = {'oid':  oid,
                    'path': key,
                    'rev':  '.'.join(reversed(key.split('.'))),
@@ -115,9 +115,9 @@ class Sqldoc:
             data.append(tuple(row.values()))
         cur = self.cursor()
         cur.executemany("insert into search values (null, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s);", data)
-        return oid, obj
+        return oid, doc
 
-    def read_obj(self, oid):
+    def read_doc(self, oid):
         cur = self.cursor(dictionary=True)
         cur.execute("select * from search where oid=%s", (oid,))
         items = []
@@ -125,16 +125,16 @@ class Sqldoc:
             colname = self.from_sql_map.get(row['type'], 'str')
             value = row[colname]
             items.append((row['path'], value))
-        return assemble_obj(items)
+        return assemble_doc(items)
 
-    def del_obj(self, oid):
+    def del_doc(self, oid):
         cur = self.cursor()
         cur.execute("delete from search where oid=%s", (oid,))
 
-    def update_obj(self, obj):
-        oid = obj['_oid']
-        self.del_obj(oid)
-        return self.store_obj(obj)
+    def update_doc(self, doc):
+        oid = doc['_oid']
+        self.del_doc(oid)
+        return self.store_doc(doc)
 
     def query_oids(self, fragment):
         sql = prepare_sql(fragment)
@@ -142,9 +142,12 @@ class Sqldoc:
         cur.execute(sql)
         return [r[0] for r in cur.fetchall()]
 
-    def query_objs(self, fragment):
+    def query_docs(self, fragment):
         oids = self.query_oids(fragment)
-        return [self.read_obj(oid) for oid in oids]
+        return [self.read_doc(oid) for oid in oids]
+
+
+
 
 if __name__ == '__main__':
     conn = mariadb.connect(
@@ -157,7 +160,7 @@ if __name__ == '__main__':
 
     sqldoc = Sqldoc(conn, True)
 
-    obj = {
+    doc = {
             "a": "one",
             "b": 2,
             "c": {
@@ -178,18 +181,17 @@ if __name__ == '__main__':
             }
     }
 
-    oid, obj1 = sqldoc.store_obj(obj)
+    oid, doc1 = sqldoc.store_doc(doc)
 
-    obj2 = sqldoc.read_obj(oid)
-    assert obj2 == obj1
-    obj2['foo']='bar'
-    obj3 = sqldoc.update_obj(obj2)
-    pprint(obj3)
+    doc2 = sqldoc.read_doc(oid)
+    assert doc2 == doc1
+    doc2['foo'] = 'bar'
+    doc3 = sqldoc.update_doc(doc2)
+    pprint(doc3)
 
     oid2 = sqldoc.query_oids('x.path="a"')
     pprint(oid2)
 
-    pprint(sqldoc.query_objs('a1.name="i"'))
-
+    pprint(sqldoc.query_docs('a1.name="h"'))
 
     sqldoc.commit()

@@ -1,23 +1,23 @@
 import re
 
-def flatten_obj(obj, delimeter='.',path = ""):
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            for r in flatten_obj(v, delimeter,path + delimeter + k if path else k):
+def flatten_doc(doc, delimeter='.',path = ""):
+    if isinstance(doc, dict):
+        for k, v in doc.items():
+            for r in flatten_doc(v, delimeter,path + delimeter + k if path else k):
                 yield r
-    elif isinstance(obj, list) or isinstance(obj,tuple):
-        for i, v in enumerate(obj):
+    elif isinstance(doc, list) or isinstance(doc,tuple):
+        for i, v in enumerate(doc):
             s = str(i)
-            for r in flatten_obj(v, delimeter, path + delimeter+s if path else s):
+            for r in flatten_doc(v, delimeter, path + delimeter+s if path else s):
                 yield r
     else:
-        yield path,obj
+        yield path,doc
 
-def convert(obj):
+def convert(doc):
     try:
-        return int(obj)
+        return int(doc)
     except ValueError:
-        return obj
+        return doc
 
 def add_to_current(current,key,next):
     if type(current) == dict:
@@ -26,11 +26,11 @@ def add_to_current(current,key,next):
         current.append(next)
     return current
 
-def assemble_obj(items, delimeter='.'):
+def assemble_doc(items, delimeter='.'):
     items = sorted(items)
-    obj = {}
+    doc = {}
     for path,value in items:
-        current = obj
+        current = doc
         parts = path.split(delimeter)
         for i,part in enumerate(parts):
             part = convert(part)
@@ -42,13 +42,13 @@ def assemble_obj(items, delimeter='.'):
                 except (KeyError, IndexError, TypeError):
                     nextpart = parts[i + 1]
                     if type(convert(nextpart)) == int:
-                        nextobj = []
+                        nextdoc = []
                     else:
-                        nextobj = {}
+                        nextdoc = {}
 
-                    add_to_current(current,part,nextobj)
+                    add_to_current(current,part,nextdoc)
                     current = current[part]
-    return obj
+    return doc
 
 
 
@@ -81,7 +81,7 @@ def prepare_sql(fragment, tablename='search'):
 
 if __name__ == '__main__':
     from pprint import pprint
-    obj = {
+    doc = {
         "a": "one",
         "b": 2,
         "c": {
@@ -100,8 +100,8 @@ if __name__ == '__main__':
             "g":[1,2,3]
         }
     }
-    db = flatten_obj(obj,'.')
-    pprint(assemble_obj(db)==obj)
+    db = flatten_doc(doc,'.')
+    pprint(assemble_doc(db)==doc)
 
     part = """
         s1.path='b' and

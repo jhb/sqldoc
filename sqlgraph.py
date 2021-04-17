@@ -13,10 +13,8 @@ class SqlGraph(Sqldoc):
     #
 
     def create_edge(self, source, target, **kwargs):
-        if type(source) is not str:
-            source = source['_docid']
-        if type(target) is not str:
-            target = target['_docid']
+        source = self._docid(source)
+        target = self._docid(target)
 
         edge = dict(_source=source, _target=target)
         edge.update(**kwargs)
@@ -26,14 +24,12 @@ class SqlGraph(Sqldoc):
         return Node(self, **self.create_doc(kwargs))
 
     def incoming_edgeids(self, node):
-        if type(node) != str:
-            node = node['_docid']
+        node = self._docid(node)
         fragment = f"a1.name='_target' and a1.str='{node}'"
         return self.query_docids(fragment)
 
     def outgoing_edgeids(self, node):
-        if type(node) != str:
-            node = node['_docid']
+        node = self._docid(node)
         fragment = f"a1.name='_source' and a1.str='{node}'"
         return self.query_docids(fragment)
 
@@ -42,8 +38,7 @@ class SqlGraph(Sqldoc):
             yield Edge(self, **self.read_doc(edgeid))
 
     def del_node(self, node, del_connected=False):
-        if type(node) != str:
-            node = node['_docid']
+        node = self._docid(node)
         incoming = self.incoming_edgeids(node)
         outgoing = self.outgoing_edgeids(node)
         alledges = set(incoming) | set(outgoing)

@@ -16,7 +16,7 @@ class Sqldoc:
 
     def __init__(self, conn, do_setup=False, debug=False):
         self.conn = conn
-        self.debug=debug
+        self.debug = debug
         self.autocommit = False
         if do_setup:
             self.setup_tables()
@@ -34,6 +34,12 @@ class Sqldoc:
                                  d='dt',
                                  t='t',
                                  b='blob')
+
+    @staticmethod
+    def _docid(docid):
+        if type(docid) != str:
+            docid = docid['_docid']
+        return docid
 
     def commit(self):
         self.conn.commit()
@@ -85,7 +91,8 @@ class Sqldoc:
         for s in finish:
             cur.execute(s)
 
-    def to_blob(self, value):
+    @staticmethod
+    def to_blob(value):
         if len(value) > 1024:
             return value
         else:
@@ -94,7 +101,8 @@ class Sqldoc:
     def to_sql(self):
         return
 
-    def to_datetime(self, value):
+    @staticmethod
+    def to_datetime(value):
         if type(value) is datetime:
             return value
         else:
@@ -135,6 +143,7 @@ class Sqldoc:
         return doc
 
     def read_doc(self, docid, klass=dict):
+        docid = self._docid(docid)
         cur = self.cursor(dictionary=True)
         cur.execute("select * from search where docid=%s", (docid,))
         items = []
@@ -145,6 +154,7 @@ class Sqldoc:
         return assemble_doc(items)
 
     def del_doc(self, docid):
+        docid = self._docid(docid)
         cur = self.cursor()
         cur.execute("delete from search where docid=%s", (docid,))
 

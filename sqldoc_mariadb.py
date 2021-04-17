@@ -7,13 +7,16 @@ from dateutil.parser import parse
 
 from helpers import flatten_doc, assemble_doc, prepare_sql
 
+
 class AlreadyExisting(Exception):
     pass
 
+
 class Sqldoc:
 
-    def __init__(self, conn, do_setup=False):
+    def __init__(self, conn, do_setup=False, debug=False):
         self.conn = conn
+        self.debug=debug
         self.autocommit = False
         if do_setup:
             self.setup_tables()
@@ -46,7 +49,7 @@ class Sqldoc:
                 create table search
                 (
                    `id`    integer primary key auto_increment,
-                   `docid` varchar(256) not null,
+                   `docid` varchar(32) not null,
                    `path`  varchar(256) not null,
                    `rev`   varchar(256) not null,
                    `name`  varchar(256) not null,
@@ -70,11 +73,11 @@ class Sqldoc:
                 "create index if not exists `path` on search (`path`);",
                 "create index if not exists `rev` on search (`rev`);",
                 "create index if not exists `name` on search (`name`);",
+                "create index if not exists `type` on search (`type`);",
                 "create index if not exists `str` on search (`str`);",
                 "create index if not exists `int` on search (`int`);",
                 "create index if not exists `float` on search (`float`);",
                 "create index if not exists `dt` on search (`dt`);",
-                "create index if not exists `type` on search (`type`);",
                 "create fulltext index if not exists `text` on search (`text`);",
 
         ]
@@ -97,7 +100,7 @@ class Sqldoc:
         else:
             return parse(value)
 
-    def store_doc(self, doc, docid=None, new_docid_on_conflict=False):
+    def create_doc(self, doc, docid=None, new_docid_on_conflict=False):
         doc = dict(doc)
 
         if docid is None:
@@ -129,9 +132,9 @@ class Sqldoc:
             data.append(tuple(row.values()))
         cur = self.cursor()
         cur.executemany("insert into search values (null, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s);", data)
-        return docid, doc
+        return doc
 
-    def read_doc(self, docid):
+    def read_doc(self, docid, klass=dict):
         cur = self.cursor(dictionary=True)
         cur.execute("select * from search where docid=%s", (docid,))
         items = []
@@ -148,11 +151,13 @@ class Sqldoc:
     def update_doc(self, doc):
         docid = doc['_docid']
         self.del_doc(docid)
-        return self.store_doc(doc)
+        return self.create_doc(doc)
 
     def query_docids(self, fragment):
         sql = prepare_sql(fragment)
         cur = self.cursor()
+        if self.debug:
+            print(sql)
         cur.execute(sql)
         return [r[0] for r in cur.fetchall()]
 
@@ -162,7 +167,6 @@ class Sqldoc:
 
 
 def test():
-
     conn = mariadb.connect(
             user="sqldoc",
             password="sqldoc",
@@ -194,15 +198,15 @@ def test():
             }
     }
 
-    docid1, doc1 = sqldoc.store_doc(doc)
+    doc1 = sqldoc.create_doc(doc)
     sqldoc.commit()
 
-    doc2 = sqldoc.read_doc(docid1)
+    doc2 = sqldoc.read_doc(doc1['_docid'])
     pprint(doc1)
     pprint(doc2)
     assert doc2 == doc1
     doc2['foo'] = 'bar'
-    doc3id, doc3 = sqldoc.update_doc(doc2)
+    doc3 = sqldoc.update_doc(doc2)
     pprint(doc3)
 
     docid2 = sqldoc.query_docids('x.path="a"')
@@ -211,14 +215,15 @@ def test():
     pprint(sqldoc.query_docs('a1.name="h"'))
 
     try:
-        sqldoc.store_doc(doc3)
+        sqldoc.create_doc(doc3)
     except AlreadyExisting:
         pass
 
-    doc4id,doc4 = sqldoc.store_doc(doc3,new_docid_on_conflict=True)
-    print(doc4id)
+    doc4 = sqldoc.create_doc(doc3, new_docid_on_conflict=True)
+    print(doc4['_docid'])
 
     sqldoc.commit()
+
 
 if __name__ == '__main__':
     test()

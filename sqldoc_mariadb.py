@@ -1,4 +1,3 @@
-import itertools
 import uuid
 from datetime import datetime
 from pprint import pprint
@@ -8,6 +7,8 @@ from dateutil.parser import parse
 
 from helpers import flatten_doc, assemble_doc, prepare_sql
 
+class AlreadyExisting(Exception):
+    pass
 
 class Sqldoc:
 
@@ -48,14 +49,14 @@ class Sqldoc:
                    `docid` varchar(256) not null,
                    `path`  varchar(256) not null,
                    `rev`   varchar(256) not null,
-                   `name`   varchar(256) not null,
+                   `name`  varchar(256) not null,
                     `type` char,
-                   `str` varchar(256),
-                   `int` integer,
+                   `str`   varchar(256),
+                   `int`   integer,
                    `float` float,
-                   `dt` datetime(6),
-                   `text` text,
-                   `blob` blob
+                   `dt`    datetime(6),
+                   `text`  text,
+                   `blob`  blob
                     );""",
 
         ]
@@ -96,20 +97,28 @@ class Sqldoc:
         else:
             return parse(value)
 
-    def store_doc(self, doc, docid=None):
+    def store_doc(self, doc, docid=None, new_docid_on_conflict=False):
         doc = dict(doc)
 
         if docid is None:
             docid = doc.get('_docid', uuid.uuid4().hex)
+
+        existing = self.query_docids(f"a.name='_docid' and a.str='{docid}'")
+        if existing:
+            if new_docid_on_conflict:
+                docid = uuid.uuid4().hex
+            else:
+                raise AlreadyExisting(docid)
+
         doc['_docid'] = docid
         rows = []
         data = []
         for key, value in flatten_doc(doc):
-            row = {'docid':  docid,
-                   'path': key,
-                   'rev':  '.'.join(reversed(key.split('.'))),
-                   'name': key.split('.')[-1],
-                   'type': str(type(value))[8]}
+            row = {'docid': docid,
+                   'path':  key,
+                   'rev':   '.'.join(reversed(key.split('.'))),
+                   'name':  key.split('.')[-1],
+                   'type':  str(type(value))[8]}
             for fname, f in self.to_sql_map.items():
                 try:
                     v = f(value)
@@ -152,9 +161,8 @@ class Sqldoc:
         return [self.read_doc(docid) for docid in docids]
 
 
+def test():
 
-
-if __name__ == '__main__':
     conn = mariadb.connect(
             user="sqldoc",
             password="sqldoc",
@@ -186,15 +194,15 @@ if __name__ == '__main__':
             }
     }
 
-    docid, doc1 = sqldoc.store_doc(doc)
+    docid1, doc1 = sqldoc.store_doc(doc)
     sqldoc.commit()
 
-    doc2 = sqldoc.read_doc(docid)
+    doc2 = sqldoc.read_doc(docid1)
     pprint(doc1)
     pprint(doc2)
     assert doc2 == doc1
     doc2['foo'] = 'bar'
-    doc3 = sqldoc.update_doc(doc2)
+    doc3id, doc3 = sqldoc.update_doc(doc2)
     pprint(doc3)
 
     docid2 = sqldoc.query_docids('x.path="a"')
@@ -202,4 +210,15 @@ if __name__ == '__main__':
 
     pprint(sqldoc.query_docs('a1.name="h"'))
 
+    try:
+        sqldoc.store_doc(doc3)
+    except AlreadyExisting:
+        pass
+
+    doc4id,doc4 = sqldoc.store_doc(doc3,new_docid_on_conflict=True)
+    print(doc4id)
+
     sqldoc.commit()
+
+if __name__ == '__main__':
+    test()

@@ -6,11 +6,6 @@ class StillConnected(Exception):
 
 
 class SqlGraph(Sqldoc):
-    pass
-
-    # outgoing
-    # incoming
-    #
 
     def create_edge(self, source, target, **kwargs):
         source = self._docid(source)
@@ -25,12 +20,12 @@ class SqlGraph(Sqldoc):
 
     def incoming_edgeids(self, node):
         node = self._docid(node)
-        fragment = f"a1.name='_target' and a1.str='{node}'"
+        fragment = f"attr.name='_target' and attr.str='{node}'"
         return self.query_docids(fragment)
 
     def outgoing_edgeids(self, node):
         node = self._docid(node)
-        fragment = f"a1.name='_source' and a1.str='{node}'"
+        fragment = f"attr.name='_source' and attr.str='{node}'"
         return self.query_docids(fragment)
 
     def edges(self, edgeids):

@@ -114,7 +114,7 @@ class Sqldoc:
         if docid is None:
             docid = doc.get('_docid', uuid.uuid4().hex)
 
-        existing = self.query_docids(f"a.name='_docid' and a.str='{docid}'")
+        existing = self.query_docids(f"attr.name='_docid' and attr.str='{docid}'")
         if existing:
             if new_docid_on_conflict:
                 docid = uuid.uuid4().hex
@@ -219,10 +219,10 @@ def test():
     doc3 = sqldoc.update_doc(doc2)
     pprint(doc3)
 
-    docid2 = sqldoc.query_docids('x.path="a"')
+    docid2 = sqldoc.query_docids('attr.path="a"')
     pprint(docid2)
 
-    pprint(sqldoc.query_docs('a1.name="h"'))
+    pprint(sqldoc.query_docs('attr.name="h"'))
 
     try:
         sqldoc.create_doc(doc3)

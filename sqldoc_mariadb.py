@@ -200,7 +200,7 @@ def test():
                             },
                             {
                                     "x": "six",
-                                    "y": "this is some text"
+                                    "y": "this is some rather random text"
                             },
                     ],
                     "g": [1, 2, 3],
@@ -231,6 +231,9 @@ def test():
 
     doc4 = sqldoc.create_doc(doc3, new_docid_on_conflict=True)
     print(doc4['_docid'])
+
+    sqldoc.commit()  # needed for fulltext indexing
+    print(sqldoc.query_docids("attr.name='y' and attr.text='random'"))
 
     sqldoc.commit()
 

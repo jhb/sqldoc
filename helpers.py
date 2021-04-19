@@ -57,8 +57,14 @@ def prepare_sql(fragment, tablename='search'):
     fragment = fragment.strip()
     fragment = '\n'.join(indent + f.strip() for f in fragment.split('\n'))
     fragment = fragment[len(indent):]
+
     parts = re.findall(r'''(\w+)\.(\w+)(\W)''', fragment)
-    names = sorted(list({p[0] for p in parts}))
+    names = {p[0] for p in parts}
+
+    names = sorted(list(names))
+
+    fragment = re.sub(r"""(\w+)\.text='(.*?)'""","""match(\\1.text) against('\\2' IN BOOLEAN MODE)""",fragment)
+
 
     tables = f',\n{indent}'.join([f'{tablename} as {n}' for n in names])
 
@@ -107,8 +113,8 @@ if __name__ == '__main__':
         s1.path='b' and
         s1.str='2' and
         s2.path='a' and
-        s2.str='one'
-    
+        s2.str='one' and
+        s2.text='foo'
     """
 
     sql = prepare_sql(part)

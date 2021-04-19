@@ -1,11 +1,16 @@
-from sqldoc_mariadb import Sqldoc, mariadb
-
+from sqldoc_mariadb import mariadb, Sqldoc
 
 class StillConnected(Exception):
     pass
 
 
-class SqlGraph(Sqldoc):
+class SqlGraph:
+
+    def __init__(self,storage:Sqldoc):
+        self.storage = storage
+
+    def __getattr__(self, item):
+        return getattr(self.storage,item)
 
     def create_edge(self, source, target, **kwargs):
         source = self._docid(source)
@@ -92,7 +97,8 @@ def test():
 
             port=3306)
 
-    sg = SqlGraph(conn, True, False)
+    storage = Sqldoc(conn, True, False)
+    sg = SqlGraph(storage)
 
     alice = sg.create_node(name='Alice')
     bob = sg.create_node(name='Bob')

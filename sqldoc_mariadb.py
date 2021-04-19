@@ -12,7 +12,11 @@ class AlreadyExisting(Exception):
     pass
 
 
-class Sqldoc:
+class DocStorage:
+    pass
+
+
+class Sqldoc(DocStorage):
 
     def __init__(self, conn, do_setup=False, debug=False):
         self.conn = conn
@@ -20,6 +24,7 @@ class Sqldoc:
         self.autocommit = False
         if do_setup:
             self.setup_tables()
+            self.setup_indexes()
 
         self.to_sql_map = dict(str=str,
                                int=int,

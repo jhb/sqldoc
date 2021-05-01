@@ -6,7 +6,7 @@ import mariadb
 from dateutil.parser import parse
 
 from helpers import flatten_doc, assemble_doc, prepare_sql
-
+from functools import wraps
 
 class AlreadyExisting(Exception):
     pass
@@ -14,6 +14,17 @@ class AlreadyExisting(Exception):
 
 class DocStorage:
     pass
+
+
+def commits(func):
+    @wraps(func)
+    def inner(*args,**kwargs):
+        r = func(*args,**kwargs)
+        if args[0].autocommit:
+            args[0].commit()
+        return r
+    return inner
+
 
 
 class Sqldoc(DocStorage):
@@ -113,11 +124,14 @@ class Sqldoc(DocStorage):
         else:
             return parse(value)
 
+    @commits
     def create_doc(self, doc, docid=None, newdocid_on_conflict=False):
         doc = dict(doc)
 
-        if docid is None:
-            docid = doc.get('docid', uuid.uuid4().hex)
+        if not docid:
+            docid = doc.get('docid', None)
+        if not docid:
+            docid = uuid.uuid4().hex
 
         existing = self.querydocids(f"attr.name='docid' and attr.str='{docid}'")
         if existing:
@@ -147,9 +161,10 @@ class Sqldoc(DocStorage):
         cur.executemany("insert into search values (null, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s);", data)
         return doc
 
-    def read_doc(self, docid, klass=dict):
+    def read_doc(self, docid):
         docid = self.docid(docid)
-        cur = self.cursor(dictionary=True)
+        cur: mariadb.connection.cursor = self.cursor(dictionary=True)
+
         cur.execute("select * from search where docid=%s", (docid,))
         items = []
         for row in cur.fetchall():
@@ -158,11 +173,13 @@ class Sqldoc(DocStorage):
             items.append((row['path'], value))
         return assemble_doc(items)
 
+    @commits
     def del_doc(self, docid):
         docid = self.docid(docid)
         cur = self.cursor()
         cur.execute("delete from search where docid=%s", (docid,))
 
+    @commits
     def update_doc(self, doc):
         docid = doc['docid']
         self.del_doc(docid)
@@ -176,7 +193,7 @@ class Sqldoc(DocStorage):
         cur.execute(sql)
         return [r[0] for r in cur.fetchall()]
 
-    def query_docs(self, fragment):
+    def query_docs(self, fragment=""):
         docids = self.querydocids(fragment)
         return [self.read_doc(docid) for docid in docids]
 

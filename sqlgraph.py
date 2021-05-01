@@ -6,7 +6,7 @@ class StillConnected(Exception):
 
 class SqlGraph:
 
-    def __init__(self,storage:Sqldoc):
+    def __init__(self, storage: Sqldoc):
         self.storage = storage
 
     def __getattr__(self, item):

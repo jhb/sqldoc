@@ -168,7 +168,7 @@ class Sqldoc(DocStorage):
         self.del_doc(docid)
         return self.create_doc(doc)
 
-    def querydocids(self, fragment):
+    def querydocids(self, fragment=""):
         sql = prepare_sql(fragment)
         cur = self.cursor()
         if self.debug:
@@ -182,13 +182,7 @@ class Sqldoc(DocStorage):
 
 
 def test():
-    conn = mariadb.connect(
-            user="sqldoc",
-            password="sqldoc",
-            database='sqldoc',
-            host="127.0.0.1",
-
-            port=3306)
+    from config import conn
 
     sqldoc = Sqldoc(conn, True)
 

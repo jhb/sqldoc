@@ -58,9 +58,12 @@ def prepare_sql(fragment, tablename='search'):
     fragment = '\n'.join(indent + f.strip() for f in fragment.split('\n'))
     fragment = fragment[len(indent):]
 
-    parts = re.findall(r'''(\w+)\.(\w+)(\W)''', fragment)
+    parts = re.findall(r'''(\w+)\.(\w+)(\W?)''', fragment)
     names = {p[0] for p in parts}
-
+    include_where = True
+    if not names:
+        names ={tablename,}
+        include_where = False
     names = sorted(list(names))
 
     fragment = re.sub(r"""(\w+)\.text='(.*?)'""","""match(\\1.text) against('\\2' IN BOOLEAN MODE)""",fragment)
@@ -72,14 +75,16 @@ def prepare_sql(fragment, tablename='search'):
     select 
         distinct {names[0]}.docid
     from
-        {tables}
-    where
-        {fragment}"""
+        {tables}"""
+    if include_where:
+        sql += f"""    
+        where
+            {fragment}"""
 
-    if len(names) > 1:
-        _ = [f'{name}.docid = {names[i + 1]}.docid' for i, name in enumerate(names[:-1])]
-        where = ' and \n    '.join(_)
-        sql += f' and\n{indent}' + where
+        if len(names) > 1:
+            _ = [f'{name}.docid = {names[i + 1]}.docid' for i, name in enumerate(names[:-1])]
+            where = ' and \n    '.join(_)
+            sql += f' and\n{indent}' + where
     sql = '\n'.join(l[4:] for l in sql.split('\n'))
     return sql
 

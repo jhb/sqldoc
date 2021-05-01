@@ -89,15 +89,9 @@ class Edge(dict):
 
 
 def test():
-    conn = mariadb.connect(
-            user="sqldoc",
-            password="sqldoc",
-            database='sqldoc',
-            host="127.0.0.1",
-
-            port=3306)
-
+    from config import conn
     storage = Sqldoc(conn, True, False)
+
     sg = SqlGraph(storage)
 
     alice = sg.create_node(name='Alice')

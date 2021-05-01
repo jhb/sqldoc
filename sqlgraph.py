@@ -13,10 +13,10 @@ class SqlGraph:
         return getattr(self.storage,item)
 
     def create_edge(self, source, target, **kwargs):
-        source = self._docid(source)
-        target = self._docid(target)
+        source = self.docid(source)
+        target = self.docid(target)
 
-        edge = dict(_source=source, _target=target)
+        edge = dict(source=source, target=target)
         edge.update(**kwargs)
         return Edge(self, **self.create_doc(edge))
 
@@ -24,21 +24,21 @@ class SqlGraph:
         return Node(self, **self.create_doc(kwargs))
 
     def incoming_edgeids(self, node):
-        node = self._docid(node)
-        fragment = f"attr.name='_target' and attr.str='{node}'"
-        return self.query_docids(fragment)
+        node = self.docid(node)
+        fragment = f"attr.name='target' and attr.str='{node}'"
+        return self.querydocids(fragment)
 
     def outgoing_edgeids(self, node):
-        node = self._docid(node)
-        fragment = f"attr.name='_source' and attr.str='{node}'"
-        return self.query_docids(fragment)
+        node = self.docid(node)
+        fragment = f"attr.name='source' and attr.str='{node}'"
+        return self.querydocids(fragment)
 
     def edges(self, edgeids):
         for edgeid in edgeids:
             yield Edge(self, **self.read_doc(edgeid))
 
     def del_node(self, node, del_connected=False):
-        node = self._docid(node)
+        node = self.docid(node)
         incoming = self.incoming_edgeids(node)
         outgoing = self.outgoing_edgeids(node)
         alledges = set(incoming) | set(outgoing)
@@ -82,10 +82,10 @@ class Edge(dict):
         dict.__init__(self, **kwargs)
 
     def source(self):
-        return Node(self.sg, **self.sg.read_doc(self['_source']))
+        return Node(self.sg, **self.sg.read_doc(self['source']))
 
     def target(self):
-        return Node(self.sg, **self.sg.read_doc(self['_target']))
+        return Node(self.sg, **self.sg.read_doc(self['target']))
 
 
 def test():

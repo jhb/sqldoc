@@ -41,9 +41,9 @@ class Sqldoc(DocStorage):
                                  b='blob')
 
     @staticmethod
-    def _docid(docid):
+    def docid(docid):
         if type(docid) != str:
-            docid = docid['_docid']
+            docid = docid['docid']
         return docid
 
     def commit(self):
@@ -113,20 +113,20 @@ class Sqldoc(DocStorage):
         else:
             return parse(value)
 
-    def create_doc(self, doc, docid=None, new_docid_on_conflict=False):
+    def create_doc(self, doc, docid=None, newdocid_on_conflict=False):
         doc = dict(doc)
 
         if docid is None:
-            docid = doc.get('_docid', uuid.uuid4().hex)
+            docid = doc.get('docid', uuid.uuid4().hex)
 
-        existing = self.query_docids(f"attr.name='_docid' and attr.str='{docid}'")
+        existing = self.querydocids(f"attr.name='docid' and attr.str='{docid}'")
         if existing:
-            if new_docid_on_conflict:
+            if newdocid_on_conflict:
                 docid = uuid.uuid4().hex
             else:
                 raise AlreadyExisting(docid)
 
-        doc['_docid'] = docid
+        doc['docid'] = docid
         rows = []
         data = []
         for key, value in flatten_doc(doc):
@@ -148,7 +148,7 @@ class Sqldoc(DocStorage):
         return doc
 
     def read_doc(self, docid, klass=dict):
-        docid = self._docid(docid)
+        docid = self.docid(docid)
         cur = self.cursor(dictionary=True)
         cur.execute("select * from search where docid=%s", (docid,))
         items = []
@@ -159,16 +159,16 @@ class Sqldoc(DocStorage):
         return assemble_doc(items)
 
     def del_doc(self, docid):
-        docid = self._docid(docid)
+        docid = self.docid(docid)
         cur = self.cursor()
         cur.execute("delete from search where docid=%s", (docid,))
 
     def update_doc(self, doc):
-        docid = doc['_docid']
+        docid = doc['docid']
         self.del_doc(docid)
         return self.create_doc(doc)
 
-    def query_docids(self, fragment):
+    def querydocids(self, fragment):
         sql = prepare_sql(fragment)
         cur = self.cursor()
         if self.debug:
@@ -177,7 +177,7 @@ class Sqldoc(DocStorage):
         return [r[0] for r in cur.fetchall()]
 
     def query_docs(self, fragment):
-        docids = self.query_docids(fragment)
+        docids = self.querydocids(fragment)
         return [self.read_doc(docid) for docid in docids]
 
 
@@ -216,7 +216,7 @@ def test():
     doc1 = sqldoc.create_doc(doc)
     sqldoc.commit()
 
-    doc2 = sqldoc.read_doc(doc1['_docid'])
+    doc2 = sqldoc.read_doc(doc1['docid'])
     pprint(doc1)
     pprint(doc2)
     assert doc2 == doc1
@@ -224,7 +224,7 @@ def test():
     doc3 = sqldoc.update_doc(doc2)
     pprint(doc3)
 
-    docid2 = sqldoc.query_docids('attr.path="a"')
+    docid2 = sqldoc.querydocids('attr.path="a"')
     pprint(docid2)
 
     pprint(sqldoc.query_docs('attr.name="h"'))
@@ -234,11 +234,11 @@ def test():
     except AlreadyExisting:
         pass
 
-    doc4 = sqldoc.create_doc(doc3, new_docid_on_conflict=True)
-    print(doc4['_docid'])
+    doc4 = sqldoc.create_doc(doc3, newdocid_on_conflict=True)
+    print(doc4['docid'])
 
     sqldoc.commit()  # needed for fulltext indexing
-    print(sqldoc.query_docids("attr.name='y' and attr.text='random'"))
+    print(sqldoc.querydocids("attr.name='y' and attr.text='random'"))
 
     sqldoc.commit()
 

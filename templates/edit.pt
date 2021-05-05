@@ -1,0 +1,14 @@
+<div metal:use-macro="load: main_template.pt" tal:omit-tag="">
+    <div metal:fill-slot="content">
+        <form action="${docid}" method="post">
+            <h2>Edit document ${docid}</h2>
+            <input type="submit" value="save"><br />
+            <textarea name="yaml" cols="100" rows="30" id="document">${yaml_doc}</textarea><br />
+            ${error}<br>
+            <input type="submit" value="save">
+
+
+        </form>
+
+    </div>
+</div>

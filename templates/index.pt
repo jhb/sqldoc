@@ -1,0 +1,13 @@
+<div metal:use-macro="load: main_template.pt" tal:omit-tag="">
+    <div metal:fill-slot="content">
+        <ul>
+            <li tal:repeat="doc docs">
+                <pre>${pformat(doc)} <a href="edit/${doc['docid']}">edit</a>
+                </pre>
+            </li>
+        </ul>
+        <br>
+        <a href="edit/new">add new</a>
+
+    </div>
+</div>

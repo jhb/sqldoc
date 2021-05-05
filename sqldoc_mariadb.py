@@ -129,7 +129,7 @@ class Sqldoc(DocStorage):
         doc = dict(doc)
 
         if not docid:
-            docid = doc.get('docid', None)
+            docid = doc.get('docid')
         if not docid:
             docid = uuid.uuid4().hex
 
@@ -161,7 +161,7 @@ class Sqldoc(DocStorage):
         cur.executemany("insert into search values (null, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s);", data)
         return doc
 
-    def read_doc(self, docid):
+    def read_doc(self, docid) -> dict:
         docid = self.docid(docid)
         cur: mariadb.connection.cursor = self.cursor(dictionary=True)
 

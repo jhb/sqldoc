@@ -1,11 +1,15 @@
 from fastapi import FastAPI
 from fastapi import responses
+import fastapi_chameleon
 import uvicorn
 import config
 from sqldoc_mariadb import Sqldoc
 from sqlgraph import SqlGraph
 
+dev_mode=True
+
 app = FastAPI()
+fastapi_chameleon.global_init('templates', auto_reload=dev_mode)
 config.sqldoc = Sqldoc(config.conn,debug=False)
 config.sg = SqlGraph(config.sqldoc)
 

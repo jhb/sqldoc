@@ -53,9 +53,8 @@ def edit_post(docid: str,
     error = ''
     try:
         try:
-            doc = loads(doc)
-
-            if docid in doc:
+            doc = loads(doc, top='any')
+            if type(doc) is dict and docid in doc:
                 del(doc['docid'])
         except NestedTextError:
             doc = doc

@@ -10,7 +10,7 @@
             <h2>Edit document ${docid}</h2>
             <input type="submit" value="save"><br />
             <textarea name="doc" cols="100" rows="30" id="document">${doc}</textarea><br />
-            ${error}<br>
+            ${str(error)}<br>
             <input type="submit" value="save">
 
 

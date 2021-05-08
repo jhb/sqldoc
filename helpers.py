@@ -19,6 +19,21 @@ def convert(doc):
     except ValueError:
         return doc
 
+def get_by_path(d,path, delimiter):
+    for key in path.split(delimiter):
+        d = d[convert(key)]
+    return d
+
+def set_by_path(d,value,path,delimiter):
+    tmp = d
+    elements = path.split(delimiter)
+    for key in elements[:-1]:
+        tmp = tmp[convert(key)]
+    tmp[elements[-1]] = value
+    return d
+
+
+
 def add_to_current(current,key,next):
     if type(current) == dict:
         current[key]=next

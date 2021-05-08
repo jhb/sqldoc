@@ -6,12 +6,12 @@ import fastapi
 from fastapi import Form
 from fastapi.responses import RedirectResponse
 from fastapi_chameleon import template
-from nestedtext import loads, dumps
+from nestedtext import loads, dumps, NestedTextError
 from starlette import status
 from starlette.requests import Request
 
 import config
-from sqldoc.helpers import convert
+from sqldoc.helpers import convert, get_by_path, set_by_path
 
 sqldoc = config.sqldoc
 sg = config.sg
@@ -35,8 +35,7 @@ def edit_get(docid: str, subpath: str = '') -> dict:
         doc: dict = sqldoc.read_doc(docid)
         doc = {k: v for k, v in doc.items() if k != 'docid'}
         if subpath:
-            for key in subpath.split(config.delimiter):
-                doc = doc[convert(key)]
+            doc = get_by_path(doc, subpath, config.delimiter)
         if type(doc) in [list, tuple, dict]:
             doc = dumps(doc, indent=2)
     return dict(doc=doc,
@@ -50,23 +49,37 @@ def edit_get(docid: str, subpath: str = '') -> dict:
 def edit_post(docid: str,
               request: Request,
               doc: str = Form(default=''),
-              subpath: str = '') -> RedirectResponse:
-    e = ''
+              subpath: str = ''):
+    error = ''
     try:
-        doc = loads(doc)
-        # doc['text']='foo\nbla\n\nblub\nbaz'
+        try:
+            doc = loads(doc)
+
+            if docid in doc:
+                del(doc['docid'])
+        except NestedTextError:
+            doc = doc
 
         if docid == 'new':
+            if type(doc) == str:
+                doc = dict(data=doc)
             sqldoc.create_doc(doc)
         else:
-            doc['docid'] = docid
-            sqldoc.update_doc(doc)
+            old_doc: dict = sqldoc.read_doc(docid)
+            if subpath:
+                set_by_path(old_doc,doc,subpath,config.delimiter)
+            else:
+                old_doc = doc
+            old_doc['docid'] = docid
+            sqldoc.update_doc(old_doc)
         sqldoc.commit()
         return RedirectResponse(
                 '/gui', status_code=status.HTTP_302_FOUND
         )
 
-    except Exception as e:
+    except Exception as error:
+        if type(doc) is dict:
+            doc = {k: v for k, v in doc.items() if k != 'docid'}
         return dict(doc=doc,
                     docid=docid,
-                    error=e)
+                    error=error)

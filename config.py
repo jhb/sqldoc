@@ -12,3 +12,4 @@ conn = mariadb.connect(
 
 sqldoc: Sqldoc = None
 sg: SqlGraph = None
+delimiter = '.'

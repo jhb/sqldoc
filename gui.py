@@ -1,18 +1,17 @@
+from pprint import pformat
+
 import fastapi
-from fastapi.responses import RedirectResponse
-
-import api
-from yaml import safe_dump, safe_load
+# from toml import dumps as safe_dump
+# from toml import loads as safe_load
 from fastapi import Form
-
-import config
-from models import Document
-
+from fastapi.responses import RedirectResponse
 from fastapi_chameleon import template
+from nestedtext import loads, dumps
 from starlette import status
 from starlette.requests import Request
 
-from pprint import pformat
+import config
+from sqldoc.helpers import convert
 
 sqldoc = config.sqldoc
 sg = config.sg
@@ -27,24 +26,36 @@ def index():
 
 
 @router.get('/edit/{docid}')
+@router.get('/edit/{docid}/{subpath:path}')
 @template(template_file='edit.pt')
-def edit_get(docid: str) -> dict:
+def edit_get(docid: str, subpath: str = '') -> dict:
     if docid == 'new':
-        yaml_doc = ''
+        doc = ''
     else:
         doc: dict = sqldoc.read_doc(docid)
-        yaml_doc = safe_dump({k: v for k, v in doc.items() if k != 'docid'})
-    return dict(yaml_doc=yaml_doc,
+        doc = {k: v for k, v in doc.items() if k != 'docid'}
+        if subpath:
+            for key in subpath.split(config.delimiter):
+                doc = doc[convert(key)]
+        if type(doc) in [list, tuple, dict]:
+            doc = dumps(doc, indent=2)
+    return dict(doc=doc,
                 docid=docid,
                 error='')
 
 
 @router.post('/edit/{docid}')
+@router.post('/edit/{docid}/{subpath:path}')
 @template(template_file='edit.pt')
-def edit_post(docid: str, yaml: str = Form(default='')) -> RedirectResponse:
+def edit_post(docid: str,
+              request: Request,
+              doc: str = Form(default=''),
+              subpath: str = '') -> RedirectResponse:
     e = ''
     try:
-        doc = safe_load(yaml)
+        doc = loads(doc)
+        # doc['text']='foo\nbla\n\nblub\nbaz'
+
         if docid == 'new':
             sqldoc.create_doc(doc)
         else:
@@ -52,10 +63,10 @@ def edit_post(docid: str, yaml: str = Form(default='')) -> RedirectResponse:
             sqldoc.update_doc(doc)
         sqldoc.commit()
         return RedirectResponse(
-            '..', status_code=status.HTTP_302_FOUND
+                '/gui', status_code=status.HTTP_302_FOUND
         )
 
     except Exception as e:
-        return dict(yaml_doc=yaml,
+        return dict(doc=doc,
                     docid=docid,
                     error=e)

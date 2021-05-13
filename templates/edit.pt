@@ -7,7 +7,7 @@
 
     <div metal:fill-slot="content">
         <form action="" method="post">
-            <h2>Edit document ${docid}</h2>
+            <h2>Edit document ${_docid}</h2>
             <input type="submit" value="save"><br />
             <textarea name="doc" cols="100" rows="30" id="document">${doc}</textarea><br />
             ${str(error)}<br>

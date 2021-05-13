@@ -22,17 +22,17 @@ def add(doc: Document):
     return sqldoc.create_doc(doc)
 
 
-@router.get('/{docid}', response_model=Document)
-def get_doc(docid):
-    return sqldoc.read_doc(docid)
+@router.get('/{_docid}', response_model=Document)
+def get_doc(_docid):
+    return sqldoc.read_doc(_docid)
 
 
-@router.put('/{docid}', response_model=Document)
-def post_doc(docid: str, doc: Document):
-    doc['docid'] = docid
+@router.put('/{_docid}', response_model=Document)
+def post_doc(_docid: str, doc: Document):
+    doc['_docid'] = _docid
     return sqldoc.update_doc(doc)
 
 
-@router.delete('/{docid}')
-def delete_doc(docid):
+@router.delete('/{_docid}')
+def delete_doc(_docid):
     return None

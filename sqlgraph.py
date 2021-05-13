@@ -12,11 +12,11 @@ class SqlGraph:
     def __getattr__(self, item):
         return getattr(self.storage,item)
 
-    def create_edge(self, source, target, **kwargs):
-        source = self.docid(source)
-        target = self.docid(target)
+    def create_edge(self, _source, _target, **kwargs):
+        _source = self._docid(_source)
+        _target = self._docid(_target)
 
-        edge = dict(source=source, target=target)
+        edge = dict(_source=_source, _target=_target)
         edge.update(**kwargs)
         return Edge(self, **self.create_doc(edge))
 
@@ -24,13 +24,13 @@ class SqlGraph:
         return Node(self, **self.create_doc(kwargs))
 
     def incoming_edgeids(self, node):
-        node = self.docid(node)
-        fragment = f"attr.name='target' and attr.str='{node}'"
+        node = self._docid(node)
+        fragment = f"attr.name='_target' and attr.str='{node}'"
         return self.querydocids(fragment)
 
     def outgoing_edgeids(self, node):
-        node = self.docid(node)
-        fragment = f"attr.name='source' and attr.str='{node}'"
+        node = self._docid(node)
+        fragment = f"attr.name='_source' and attr.str='{node}'"
         return self.querydocids(fragment)
 
     def edges(self, edgeids):
@@ -38,7 +38,7 @@ class SqlGraph:
             yield Edge(self, **self.read_doc(edgeid))
 
     def del_node(self, node, del_connected=False):
-        node = self.docid(node)
+        node = self._docid(node)
         incoming = self.incoming_edgeids(node)
         outgoing = self.outgoing_edgeids(node)
         alledges = set(incoming) | set(outgoing)
@@ -81,11 +81,11 @@ class Edge(dict):
         self.sg = sg
         dict.__init__(self, **kwargs)
 
-    def source(self):
-        return Node(self.sg, **self.sg.read_doc(self['source']))
+    def _source(self):
+        return Node(self.sg, **self.sg.read_doc(self['_source']))
 
-    def target(self):
-        return Node(self.sg, **self.sg.read_doc(self['target']))
+    def _target(self):
+        return Node(self.sg, **self.sg.read_doc(self['_target']))
 
 
 def test():
@@ -103,7 +103,7 @@ def test():
     print(list(bob.incoming_edges()))
     print(list(alice.outgoing_edges()))
 
-    print(edge1.source())
+    print(edge1._source())
 
     try:
         sg.del_node(charlie)

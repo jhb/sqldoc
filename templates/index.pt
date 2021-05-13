@@ -2,8 +2,8 @@
     <div metal:fill-slot="content">
         <ul>
             <li tal:repeat="doc docs">
-                <pre>${pformat(doc)} <a href="edit/${doc['docid']}">edit</a>
-                </pre>
+                ${doc['docid']} <a href="edit/${doc['docid']}">edit</a><br>
+                <pre>${pformat(doc)}</pre>
             </li>
         </ul>
         <br>

@@ -53,7 +53,7 @@ class Registry(UserDict):
 
     def find_schemata(self, obj: Any):
         """find all schemata for an object"""
-        return {k for k in self.schemata if self.matches_schema(obj, k)}
+        return sorted([k for k in self.schemata if self.matches_schema(obj, k)])
 
     def convert(self, obj: Any, path: str = '', separator: str = '.'):
         """Return data,errors. Checks for schema validation."""
@@ -123,7 +123,8 @@ if __name__ == '__main__':
     r.add('content_type', str)
     r.add('content_data', str)
     r.add('content', ('content_type', 'content_data'))
-    r.add('edge', ('_docid', '_source', '_target'))
+    r.add('edge', ('node', '_source', '_target'))
+    r.add('node',('_docid',))
 
     edge = {'_docid':   'c556a24098af4be69871d5e26cde5664',
             '_source':  'ea7a97d43d5b4846ba2bf707b775ff4d',
@@ -144,6 +145,7 @@ if __name__ == '__main__':
     pprint(r.props)
     print(r.matches_schema(person, 'address'))
     print(r.find_schemata(person))
+    print(r.find_schemata(edge))
     print(r.convert(person))
     print(person)
     try:

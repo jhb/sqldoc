@@ -12,17 +12,43 @@ from starlette.requests import Request
 
 import config
 from sqldoc.helpers import convert, get_by_path, set_by_path
+from sqldoc.schemata import ValidationError
 
 sqldoc = config.sqldoc
 sg = config.sg
+reg = config.r
 
 router = fastapi.APIRouter(default_response_class=fastapi.responses.HTMLResponse)
 
+def get_title(doc):
+    if 'edge' in reg.find_schemata(doc):
+        sourcetitle = get_title(sqldoc.read_doc(doc['_source']))
+        targettitle = get_title(sqldoc.read_doc(doc['_target']))
+        return f"{sourcetitle} -{doc.get('relation','')}-> {targettitle}"
 
+
+
+    for k in ['title','name','_docid']:
+        if k in doc:
+            return doc[k]
+
+helpers = dict(dumps=dumps,
+               get_title=get_title,
+               pformat=pformat,
+               reg=reg)
+
+
+forbidden = ['_docid','_schemata']
 @router.get('/')
 @template(template_file='index.pt')
-def index():
-    return dict(docs=sqldoc.query_docs(), pformat=pformat)
+def index(searchtext=''):
+    fragment = ''
+    if searchtext:
+        if '=' in searchtext:
+            fragement = searchtext
+        else:
+            fragment = f"attr.text='{searchtext}'"
+    return dict(docs=sqldoc.query_docs(fragment), helpers=helpers,searchtext=searchtext)
 
 
 @router.get('/edit/{_docid}')
@@ -33,14 +59,16 @@ def edit_get(_docid: str, subpath: str = '') -> dict:
         doc = ''
     else:
         doc: dict = sqldoc.read_doc(_docid)
-        doc = {k: v for k, v in doc.items() if k != '_docid'}
+        doc = {k: v for k, v in doc.items() if k not in forbidden}
         if subpath:
             doc = get_by_path(doc, subpath, config.delimiter)
         if type(doc) in [list, tuple, dict]:
             doc = dumps(doc, indent=2)
+
     return dict(doc=doc,
                 _docid=_docid,
-                error='')
+                error='',
+                helpers=helpers)
 
 
 @router.post('/edit/{_docid}')
@@ -54,6 +82,9 @@ def edit_post(_docid: str,
     try:
         try:
             doc = loads(doc, top='any')
+            doc,errors = reg.convert(doc)
+            if errors:
+                raise Exception(errors)
             if type(doc) is dict and _docid in doc:
                 del(doc['_docid'])
         except NestedTextError:
@@ -62,6 +93,7 @@ def edit_post(_docid: str,
         if _docid == 'new':
             if type(doc) == str:
                 doc = dict(data=doc)
+            doc['_schemata']=reg.find_schemata(doc)
             sqldoc.create_doc(doc)
         else:
             old_doc: dict = sqldoc.read_doc(_docid)
@@ -70,6 +102,7 @@ def edit_post(_docid: str,
             else:
                 old_doc = doc
             old_doc['_docid'] = _docid
+            old_doc['_schemata'] = reg.find_schemata(old_doc)
             sqldoc.update_doc(old_doc)
         sqldoc.commit()
         return RedirectResponse(
@@ -78,7 +111,8 @@ def edit_post(_docid: str,
 
     except Exception as error:
         if type(doc) is dict:
-            doc = {k: v for k, v in doc.items() if k != '_docid'}
+            doc = {k: v for k, v in doc.items() if k not in forbidden}
         return dict(doc=doc,
                     _docid=_docid,
-                    error=error)
+                    error=error,
+                    helpers=helpers)

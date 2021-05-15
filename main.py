@@ -10,7 +10,7 @@ dev_mode=True
 
 app = FastAPI()
 fastapi_chameleon.global_init('templates', auto_reload=dev_mode)
-config.sqldoc = Sqldoc(config.conn,debug=False)
+config.sqldoc = Sqldoc(config.conn,debug=True)
 config.sg = SqlGraph(config.sqldoc)
 
 import api

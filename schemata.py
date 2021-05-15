@@ -10,7 +10,6 @@ registry = {}
 class ValidationError(Exception):
     ...
 
-
 class Registry(UserDict):
     """The registry for property and schema definitions"""
 
@@ -74,7 +73,7 @@ class Registry(UserDict):
                 errors.update(e)
         elif key in self:
             try:
-                obj = self[key](obj)
+                obj = self[key](obj) # the actual conversion
             except Exception as e:
                 errors[path] = e
         else:
@@ -106,6 +105,7 @@ class Registry(UserDict):
         if not success:
             errors[path] = f'could not convert at {path}'
         return value, errors
+
 
 
 if __name__ == '__main__':

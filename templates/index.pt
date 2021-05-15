@@ -6,7 +6,10 @@
         </form>
         <ul>
             <li tal:repeat="doc docs">
-                ${helpers['get_title'](doc)} <a href="edit/${doc['_docid']}">edit</a><br>
+                ${helpers['get_title'](doc)} <a href="edit/${doc['_docid']}">edit</a>
+                <a tal:repeat="route helpers['get_routes'](request,doc)"
+                   tal:attributes="href route.path.format(_docid=doc['_docid'])">${route.name}</a>
+                    <br>
                 <pre>${helpers['pformat'](doc)}</pre>
                 <br>&nbsp;
             </li>

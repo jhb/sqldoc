@@ -1,4 +1,4 @@
-from sqldoc_mariadb import mariadb, Sqldoc
+from sqldoc.sqldoc_mariadb import mariadb, Sqldoc
 
 class StillConnected(Exception):
     pass

@@ -1,7 +1,7 @@
 import mariadb
-from sqldoc_mariadb import Sqldoc
-from sqlgraph import SqlGraph
-from schemata import Registry
+from sqldoc.sqldoc_mariadb import Sqldoc, InvalidReference
+from sqldoc.sqlgraph import SqlGraph
+from sqldoc.schemata import Registry
 
 
 conn = mariadb.connect(
@@ -15,10 +15,27 @@ sqldoc: Sqldoc = None
 sg: SqlGraph = None
 delimiter = '.'
 
+view_registry = {}
+
+def register_view(view,schemata):
+    if not isinstance(schemata,(list,tuple)):
+        schemata = (schemata,)
+    for schemaname in schemata:
+        registered = view_registry.setdefault(schemaname,[])
+        if view not in registered:
+            registered.append(view)
+
+def valid_reference(value):
+    if not sqldoc.read_doc(value):
+        raise InvalidReference(value)
+    return value
+
+
+
 r = Registry()
 r.add('_docid', str)
-r.add('_source', str)
-r.add('_target', str)
+r.add('_source', valid_reference)
+r.add('_target', valid_reference)
 r.add('name', str)
 r.add('age', int)
 r.add('street', str)

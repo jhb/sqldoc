@@ -9,7 +9,8 @@
     <title>Document</title>
 </head>
 <body>
-
+<a href="/gui">gui</a>
+<hr>
 <div metal:define-slot="content" tal:omit-tag="">
     Your content here
 </div>

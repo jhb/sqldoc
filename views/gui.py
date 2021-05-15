@@ -1,18 +1,19 @@
-from pprint import pformat
+
 
 import fastapi
 # from toml import dumps as safe_dump
 # from toml import loads as safe_load
-from fastapi import Form
+from fastapi import Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi_chameleon import template
 from nestedtext import loads, dumps, NestedTextError
 from starlette import status
 from starlette.requests import Request
 
-import config
+from sqldoc import config
 from sqldoc.helpers import convert, get_by_path, set_by_path
 from sqldoc.schemata import ValidationError
+from sqldoc.views.view_helpers import helpers
 
 sqldoc = config.sqldoc
 sg = config.sg
@@ -20,35 +21,18 @@ reg = config.r
 
 router = fastapi.APIRouter(default_response_class=fastapi.responses.HTMLResponse)
 
-def get_title(doc):
-    if 'edge' in reg.find_schemata(doc):
-        sourcetitle = get_title(sqldoc.read_doc(doc['_source']))
-        targettitle = get_title(sqldoc.read_doc(doc['_target']))
-        return f"{sourcetitle} -{doc.get('relation','')}-> {targettitle}"
-
-
-
-    for k in ['title','name','_docid']:
-        if k in doc:
-            return doc[k]
-
-helpers = dict(dumps=dumps,
-               get_title=get_title,
-               pformat=pformat,
-               reg=reg)
-
 
 forbidden = ['_docid','_schemata']
 @router.get('/')
 @template(template_file='index.pt')
-def index(searchtext=''):
+def index(request: Request, searchtext: str=''):
     fragment = ''
     if searchtext:
         if '=' in searchtext:
             fragement = searchtext
         else:
             fragment = f"attr.text='{searchtext}'"
-    return dict(docs=sqldoc.query_docs(fragment), helpers=helpers,searchtext=searchtext)
+    return dict(docs=sqldoc.query_docs(fragment), helpers=helpers,searchtext=searchtext,request=request)
 
 
 @router.get('/edit/{_docid}')
@@ -112,6 +96,8 @@ def edit_post(_docid: str,
     except Exception as error:
         if type(doc) is dict:
             doc = {k: v for k, v in doc.items() if k not in forbidden}
+        if type(doc) in [list, tuple, dict]:
+            doc = dumps(doc, indent=2)
         return dict(doc=doc,
                     _docid=_docid,
                     error=error,

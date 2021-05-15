@@ -5,7 +5,7 @@ from pprint import pprint
 import mariadb
 from dateutil.parser import parse
 
-from helpers import flatten_doc, assemble_doc, prepare_sql
+from sqldoc.helpers import flatten_doc, assemble_doc, prepare_sql
 from functools import wraps
 
 class AlreadyExisting(Exception):
@@ -15,6 +15,8 @@ class AlreadyExisting(Exception):
 class DocStorage:
     pass
 
+class InvalidReference(Exception):
+    ...
 
 def commits(func):
     @wraps(func)
@@ -196,6 +198,8 @@ class Sqldoc(DocStorage):
     def query_docs(self, fragment=""):
         docids = self.querydocids(fragment)
         return [self.read_doc(_docid) for _docid in docids]
+
+
 
 
 def test():

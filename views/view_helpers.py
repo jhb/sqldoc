@@ -26,7 +26,6 @@ def get_routes(request,obj):
             continue
         if set(getattr(route,'tags',[])).intersection(obj['_schemata']):
             routes.append(route)
-    print('get routes', routes)
     return routes
 
 

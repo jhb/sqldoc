@@ -29,7 +29,7 @@ def index(request: Request, searchtext: str=''):
     fragment = ''
     if searchtext:
         if '=' in searchtext:
-            fragement = searchtext
+            fragment = searchtext
         else:
             fragment = f"attr.text='{searchtext}'"
     return dict(docs=sqldoc.query_docs(fragment), helpers=helpers,searchtext=searchtext,request=request)

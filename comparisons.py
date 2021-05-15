@@ -1,5 +1,8 @@
 def part_of_full(part, full, check_values=False):
+    scalars = (str,int,float,bytes)
     if part == full:  # its the same, all good
+        return True
+    if part is ... or full is ...:
         return True
     elif isinstance(full, (dict,)):
         partkeys = set(part.keys())
@@ -12,6 +15,10 @@ def part_of_full(part, full, check_values=False):
             return False
     elif isinstance(full, (list, tuple)):
         return all(part_of_full(full, p) for p in part)
+    elif part in scalars:
+        return type(full) == part
+    else:
+        return False
 
 
 def test_simple():

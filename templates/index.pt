@@ -1,21 +1,16 @@
-<div metal:use-macro="load: main_template.pt" tal:omit-tag="">
-    <div metal:fill-slot="content">
-        <form>
-            <input name="searchtext" value="${searchtext}">
-            <input type="submit" value="search">
-        </form>
-        <ul>
-            <li tal:repeat="doc docs">
-                ${helpers['get_title'](doc)} <a href="edit/${doc['_docid']}">edit</a>
-                <a tal:repeat="route helpers['get_routes'](request,doc)"
-                   tal:attributes="href route.path.format(_docid=doc['_docid'])">${route.name}</a>
-                    <br>
-                <pre>${helpers['pformat'](doc)}</pre>
-                <br>&nbsp;
-            </li>
-        </ul>
-        <br>
-        <a href="edit/new">add new</a>
+<html>
 
-    </div>
-</div>
+  
+
+
+  <frameset cols="38%, 25%, 38%" border="1">
+
+<!--?    <frameset rows="50,50">-->
+        <frame name="two">
+<frame src="list" name="one">
+        <frame name="three">
+
+<!--?    </frameset>-->
+
+  </frameset>
+</html>

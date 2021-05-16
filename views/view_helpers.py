@@ -24,14 +24,28 @@ def get_routes(request,obj):
     for route in request.app.routes:
         if not "GET"in route.methods:
             continue
-        if set(getattr(route,'tags',[])).intersection(obj['_schemata']):
+        print('tags',getattr(route,'tags',[]))
+        if set(getattr(route,'tags',[])).intersection(obj.get('_schemata',{'node'})):
             routes.append(route)
     return routes
 
+
+def extra_schema(doc):
+    try:
+        if type(doc)==str:
+            doc=loads(doc)
+        existing = reg.find_schemata(doc)
+        possible = reg.schemata
+        extra = list(set(possible) - set(existing))
+    except Exception:
+        extra = []
+    return extra
 
 
 helpers = dict(dumps=dumps,
                get_title=get_title,
                pformat=pformat,
                reg=reg,
-               get_routes = get_routes)
+               sqldoc = sqldoc,
+               get_routes = get_routes,
+               extra_schema = extra_schema)

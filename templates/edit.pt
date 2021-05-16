@@ -6,10 +6,27 @@
 
 
     <div metal:fill-slot="content">
+        <a href="../edit/${_docid}">edit</a>
+        <a tal:repeat="route helpers['get_routes'](request,doc)"
+                   tal:attributes="href route.path.format(_docid=doc['_docid'])">${route.name}</a>
+
+        <hr>
         <form action="" method="post">
             <h2>Edit document ${_docid}</h2>
-            <input type="submit" value="save"><br />
-            <textarea name="doc" cols="100" rows="30" id="document">${doc}</textarea><br />
+            <input type="submit" value="save">
+            &nbsp; &nbsp; &nbsp;
+
+
+            <select name="addschema">
+                <option value="">Add schema</option>
+                <option tal:repeat="schemaname helpers['extra_schema'](doc)"
+                        tal:attributes='value schemaname'
+                        tal:content='schemaname'></option>
+            </select>
+
+
+            <br />
+            <textarea name="doc" cols="80" rows="30" id="document">${docstring}</textarea><br />
             ${str(error)}<br>
             <input type="submit" value="save">
 

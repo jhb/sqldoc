@@ -34,7 +34,7 @@ def edit_get(_docid: str):
     doc: dict = sqldoc.read_doc(_docid)
     converters = {'text/markdown':markdown}
     converted = converters.get(doc['content_type'],str)(doc['content_data'])
-    return dict(doc=doc,helpers=helpers,converted=converted)
+    return dict(_docid=_docid,doc=doc,helpers=helpers,converted=converted)
 
 @router.post('/edit/{_docid}', name='content')
 @template(template_file='content.pt')

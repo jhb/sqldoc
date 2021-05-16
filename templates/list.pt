@@ -1,0 +1,23 @@
+<div metal:use-macro="load: main_template.pt" tal:omit-tag="">
+    <div metal:fill-slot="content">
+        <a href="list">list</a>
+        <hr>
+        <form>
+            <input name="searchtext" value="${searchtext}">
+            <input type="submit" value="search"> &nbsp; &nbsp; &nbsp;
+            <a href="edit/new" target="three">add new</a>
+        </form>
+        <ul>
+            <li tal:repeat="doc docs">
+
+                ${helpers['get_title'](doc)}<br>
+                    <a href="edit/${doc['_docid']}" target="two">&leftarrow;</a>&nbsp;
+                    <a href="edit/${doc['_docid']}" target="three">&rightarrow;</a><br>
+                <pre>${helpers['pformat'](doc)}</pre>
+                <br>&nbsp;
+            </li>
+        </ul>
+        <br>
+
+    </div>
+</div>

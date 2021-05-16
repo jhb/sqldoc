@@ -3,6 +3,7 @@ from collections import UserDict
 from copy import deepcopy
 from pprint import pprint
 from typing import Any, Union
+from comparisons import part_of_full
 
 registry = {}
 
@@ -141,7 +142,9 @@ if __name__ == '__main__':
                                city='somewhere',
                                age='blurb'),
                   street='Firststreet',
-                  city='New York')
+                  city='New York',
+                  content=dict(content_type='text/plain',
+                               content_data='somedata'))
     pprint(r.props)
     print(r.matches_schema(person, 'address'))
     print(r.find_schemata(person))

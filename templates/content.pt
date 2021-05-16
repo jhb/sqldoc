@@ -1,0 +1,33 @@
+<div metal:use-macro="load: main_template.pt" tal:omit-tag="">
+    <span tal:omit-tag="" metal:fill-slot="extrahead">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+        <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+
+    </span>
+
+
+    <div metal:fill-slot="content">
+        <a href="../../gui/edit/${_docid}">edit</a>
+        <a href="../../content/edit/${_docid}">content</a>
+        <hr>
+
+        <form action="" method="post">
+            <h2>Edit content of ${helpers['get_title'](doc)}</h2>
+            <input name="content_type" value="${doc['content_type']}"/><br>
+            <textarea cols="100" rows="20" name="content_data">${doc['content_data']}</textarea>
+            <input type="submit" value="save">
+
+            <div tal:condition="doc['content_type'] in ['text/markdown']">
+                <script>
+                var simplemde = new SimpleMDE();
+                </script>
+
+
+                <span tal:condition="0" tal:content='structure converted'></span></div>
+            <pre tal:condition="doc['content_type'] not in ['text/markdown']" tal:content='structure converted'></pre>
+
+
+    </form>
+
+    </div>
+</div>

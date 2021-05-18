@@ -12,7 +12,6 @@ from starlette.requests import Request
 
 from sqldoc import config
 from sqldoc.helpers import convert, get_by_path, set_by_path
-from sqldoc.schemata import ValidationError
 from sqldoc.views.view_helpers import helpers
 
 sqldoc = config.sqldoc
@@ -91,7 +90,7 @@ def edit_post(_docid: str,
             doc = loads(doc, top='any')
             if not doc:
                 doc = {}
-            doc,errors = reg.convert(doc)
+            doc,errors = reg.convert(doc,copy_unknown=True)
             if errors:
                 raise Exception(errors)
             if type(doc) is dict and _docid in doc:

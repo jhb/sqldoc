@@ -2,96 +2,83 @@ import datetime
 from collections import UserDict
 from copy import deepcopy
 from pprint import pprint
-from typing import Any, Union
-from comparisons import part_of_full
+from typing import Union, Any
 
-registry = {}
-
+import pytest
 
 class ValidationError(Exception):
-    ...
+
+    def __repr__(self):
+        return self.__class__.__name__
 
 class Registry(UserDict):
-    """The registry for property and schema definitions"""
-
     def __init__(self):
         super().__init__()
         self.props = set()
         self.schemata = set()
 
-    def add(self, key: str, obj: Union[type, list, tuple]):
+    def add(self, key: str, obj: Union[type, list, tuple, str]):
         """Adds a definition. Props and schemata share a namespace, to avoid
         confusion in the data. A key is either defined or not, and should always
         mean one thing only"""
 
         if key in self:
             raise Exception(f'key {key} already taken')
+
         if isinstance(obj, list):
             obj = tuple(list)
 
         if isinstance(obj, tuple):
             self.schemata.add(key)
+
         else:
             self.props.add(key)
         self[key] = obj
+        return obj
 
-    def collect_keys(self, key: str):
-        """helper methods"""
-        out = set()
-        definition = self[key]
-        if key in self.props:
-            out.add(key)
-        else:
-            for d in definition:
-                out = out.union(self.collect_keys(d))
-        return out
-
-    def matches_schema(self, obj: Any, key: str):
-        """check if an obj matches a schema"""
-        schema_keys = self.collect_keys(key)
-        return set(obj.keys()).issuperset(schema_keys)
-
-    def find_schemata(self, obj: Any):
-        """find all schemata for an object"""
-        return sorted([k for k in self.schemata if self.matches_schema(obj, k)])
-
-    def convert(self, obj: Any, path: str = '', separator: str = '.'):
+    def convert(self, obj: Any, path: str = '', separator: str = '.', copy_unknown=False):
         """Return data,errors. Checks for schema validation."""
         obj = deepcopy(obj)
         errors = {}
         key = path.split(separator)[-1]
+
         if isinstance(obj, dict):
             for k, v in obj.items():
                 subpath = path and path + separator + k or k
-                new_value, e = self.convert(v, subpath, separator)
+                new_value, e = self.convert(v, subpath, separator, copy_unknown)
                 obj[k] = new_value
                 errors.update(e)
         elif isinstance(obj, (list, tuple)):
             for i, v in enumerate(obj):
                 subpath = path and path + separator + str(i) or str(i)
-                new_value, e = self.convert(v, subpath, separator)
+                new_value, e = self.convert(v, subpath, separator, copy_unknown)
                 obj[i] = new_value
                 errors.update(e)
         elif key in self:
-            try:
-                obj = self[key](obj) # the actual conversion
-            except Exception as e:
-                errors[path] = e
-        else:
+            validator = self[key]
+            while isinstance(validator,str):
+                validator = self[validator]
+
+            if isinstance(validator,(list,tuple)):
+                errors[path]=f'validator {key} for {path} resolves to iterable'
+            else:
+                try:
+                    obj = validator(obj)  # the actual conversion
+                except Exception as e:
+                    errors[path] = e
+        elif copy_unknown:
             obj, suberrors = self.guess(obj, path)
             errors.update(suberrors)
-
-        if key in self.schemata and not self.matches_schema(obj, key):
-            errors[path] = f"Path '{path}' did not fit Schema '{key}'"
-
+        else:
+            obj = ValidationError()
+            errors[path]=f'no validator for {path}'
         return obj, errors
 
-    def validate(self, obj: Any):
-        """Throw an exception if it doesn't fit"""
-        new, errors = self.convert(obj)
-        if errors:
-            raise ValidationError(errors)
-        return new
+    def find_schemata(self, obj: Any):
+        """find all schemata for an object"""
+        return sorted([k for k in self.schemata if self.has_schema(obj, k)])
+
+
 
     def guess(self, value: Any, path: str):
         errors = {}
@@ -107,51 +94,114 @@ class Registry(UserDict):
             errors[path] = f'could not convert at {path}'
         return value, errors
 
+    def matches_schema(self, obj, key):
+        print(obj,key)
+        validator = self[key]
+        if isinstance(validator,(list,tuple)):
+            return not any(
+                i not in obj or not self.matches_schema(obj[i], i)
+                for i in validator
+            )
+        elif isinstance(validator,str):
+            return self.matches_schema(obj,self[validator])
+        else:
+            try:
+                validator(obj)
+                return True
+            except:
+                return False
+
+    def has_schema(self,obj,key,recursive=False):
+        if self.matches_schema(obj,key):
+            return True
+
+        if isinstance(obj,dict):
+            if recursive:
+                return any(
+                    self.has_schema(obj[k],key,recursive)
+                    for k in obj
+                )
+            else:
+                return key in obj and self.matches_schema(obj[key],key)
+
+        elif isinstance(obj,(list,tuple)):
+            if recursive:
+                return any(
+                    self.has_schema(i,key,recursive)
+                    for i in obj
+                )
+            else:
+                return False
+        else:
+            return self.matches_schema(obj,key)
+
+    def validate(self, obj: Any, copy_unknown:bool=False):
+        """Throw an exception if it doesn't fit"""
+        new, errors = self.convert(obj,copy_unknown=copy_unknown)
+        if errors:
+            raise NotValidated(errors)
+        return new
 
 
-if __name__ == '__main__':
+
+@pytest.fixture
+def registry()->Registry:
     r = Registry()
-
-    r.add('_docid', str)
-    r.add('_source', str)
-    r.add('_target', str)
     r.add('name', str)
     r.add('age', int)
     r.add('street', str)
     r.add('city', str)
     r.add('address', ('street', 'city'))
     r.add('person', ('name', 'address'))
-    r.add('content_type', str)
-    r.add('content_data', str)
-    r.add('content', ('content_type', 'content_data'))
-    r.add('edge', ('node', '_source', '_target'))
-    r.add('node',('_docid',))
+    r.add('home_adress','address')
+    return r
 
-    edge = {'_docid':   'c556a24098af4be69871d5e26cde5664',
-            '_source':  'ea7a97d43d5b4846ba2bf707b775ff4d',
-            '_target':  '7518d0c8f58040e8934c49af189c28c5',
-            'relation': 'likes'}
+@pytest.fixture
+def sampledata():
+    return dict(name='Joerg',
+                age='48',
+                home_address=dict(city='Bielefeld',
+                                  street='somestreet'),
+                other_address=dict(city='Bielefeld',
+                                   street='otherstreet'),
+                address=dict(city='Bielefeld',
+                             street='rightstreet'),
+                third_address=dict(city='Leipzig',
+                                   foo='bar'))
 
-    person = dict(name='Alice Alison',
-                  age='50',
-                  job='somejob',
-                  other_address=dict(street='Somestreet',
-                                     city='Middletown',
-                                     age='10'),
-                  address=dict(foo='bar',
-                               city='somewhere',
-                               age='blurb'),
-                  street='Firststreet',
-                  city='New York',
-                  content=dict(content_type='text/plain',
-                               content_data='somedata'))
-    pprint(r.props)
-    print(r.matches_schema(person, 'address'))
-    print(r.find_schemata(person))
-    print(r.find_schemata(edge))
-    print(r.convert(person))
-    print(person)
-    try:
-        print(r.validate(person))
-    except ValidationError as e:
-        print(e)
+@pytest.fixture
+def no_address(sampledata):
+    data = {k: v for k, v in sampledata.items() if k not in ['address']}
+    return data
+
+@pytest.mark.parametrize('key,expectation',[('person',True),
+                                            ('address',False)])
+def test_matches_schema(registry,sampledata,key,expectation):
+    result =  registry.matches_schema(sampledata,key) == expectation
+    assert result
+
+@pytest.mark.parametrize('key,expectation',[('person',True),
+                                            ('address',True)])
+def test_has_schema(registry,sampledata,key,expectation):
+    result = registry.has_schema(sampledata,key) == expectation
+    assert result
+
+def test_has_schema_missing(registry,no_address):
+    assert registry.has_schema(no_address,'address') == False
+
+def test_has_schema_recursive(registry,no_address):
+    assert registry.has_schema(no_address,'address',True) == True
+
+def test_convert(registry,sampledata):
+    newdata,errors = registry.convert(sampledata)
+    assert isinstance(newdata['third_address']['foo'],NotValidated)
+    assert errors
+
+def test_convert_unknown(registry,sampledata):
+    newdata, errors = registry.convert(sampledata,copy_unknown=True)
+    assert newdata['third_address']['foo']=='bar'
+    assert not errors
+
+def test_jhb(registry,sampledata):
+    registry.has_schema(sampledata,'address')
+

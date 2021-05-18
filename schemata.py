@@ -16,6 +16,7 @@ class Registry(UserDict):
         super().__init__()
         self.props = set()
         self.schemata = set()
+        self.aliases = set()
 
     def add(self, key: str, obj: Union[type, list, tuple, str]):
         """Adds a definition. Props and schemata share a namespace, to avoid
@@ -30,7 +31,8 @@ class Registry(UserDict):
 
         if isinstance(obj, tuple):
             self.schemata.add(key)
-
+        elif isinstance(obj,str):
+            self.aliases.add(key)
         else:
             self.props.add(key)
         self[key] = obj
@@ -139,7 +141,7 @@ class Registry(UserDict):
         """Throw an exception if it doesn't fit"""
         new, errors = self.convert(obj,copy_unknown=copy_unknown)
         if errors:
-            raise NotValidated(errors)
+            raise ValidationError(errors)
         return new
 
 
@@ -194,7 +196,7 @@ def test_has_schema_recursive(registry,no_address):
 
 def test_convert(registry,sampledata):
     newdata,errors = registry.convert(sampledata)
-    assert isinstance(newdata['third_address']['foo'],NotValidated)
+    assert isinstance(newdata['third_address']['foo'],ValidationError)
     assert errors
 
 def test_convert_unknown(registry,sampledata):

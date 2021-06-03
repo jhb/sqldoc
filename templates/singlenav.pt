@@ -1,0 +1,3 @@
+<a href="../edit/${_docid}">edit</a>
+    <a tal:repeat="route helpers['get_routes'](request,doc)"
+        tal:attributes="href route.path.format(_docid=doc['_docid'])">${route.name}</a>

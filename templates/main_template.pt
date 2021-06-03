@@ -6,15 +6,17 @@
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <span tal:omit-tag="True" metal:define-slot="extrahead"></span>
-    <style>
-        body {
-            background-color: #f0f6f9;
-        }
-
-    </style>
+    <link rel="stylesheet" href="/static/sqldoc.css"/>
     <title>Document</title>
 </head>
 <body>
+<div metal:define-slot="navigation" tal:omit-tag="">
+    Your navigation here
+</div>
+<div metal:define-slot="subnavigation" tal:omit-tag="">
+    <br>&nbsp;<br>
+</div>
+<hr>
 <div metal:define-slot="content" tal:omit-tag="">
     Your content here
 </div>

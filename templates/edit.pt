@@ -4,14 +4,11 @@
 
     </span>
 
+    <div metal:fill-slot="navigation" metal:use-macro="load: singlenav.pt" />
+<!--?    <div metal:fill-slot="subnavigation"></div>-->
 
     <div metal:fill-slot="content">
-        <a href="../edit/${_docid}">edit</a>
-        <a tal:repeat="route helpers['get_routes'](request,doc)"
-                   tal:attributes="href route.path.format(_docid=doc['_docid'])">${route.name}</a>
-
-        <hr>
-        <form action="" method="post">
+        <form action="" method="post" id="editform">
             <h2>Edit document ${_docid}</h2>
             <input type="submit" value="save">
             &nbsp; &nbsp; &nbsp;

@@ -3,12 +3,13 @@
   
 
 
-  <frameset cols="38%, 25%, 38%" border="1">
+  <frameset cols="30%,70%" border="1">
 
 <!--?    <frameset rows="50,50">-->
-        <frame name="two">
-<frame src="list" name="one">
-        <frame name="three">
+    <frame src="list" name="one">
+      <frame name="two">
+
+<!--?      <frame name="three">-->
 
 <!--?    </frameset>-->
 

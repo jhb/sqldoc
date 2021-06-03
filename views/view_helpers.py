@@ -22,7 +22,7 @@ def get_title(doc):
 def get_routes(request,obj):
     routes = []
     for route in request.app.routes:
-        if not "GET"in route.methods:
+        if not (hasattr(route,'methods') and  "GET" in route.methods):
             continue
         print('tags',getattr(route,'tags',[]))
         if set(getattr(route,'tags',[])).intersection(obj.get('_schemata',{'node'})):

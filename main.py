@@ -5,6 +5,7 @@ import uvicorn
 from sqldoc import config
 from sqldoc_mariadb import Sqldoc
 from sqlgraph import SqlGraph
+from fastapi.staticfiles import StaticFiles
 
 dev_mode=True
 
@@ -19,6 +20,7 @@ from views import content, gui
 app.include_router(api.router, prefix='/api', tags=['api'])
 app.include_router(gui.router, prefix='/gui', tags=['gui'])
 app.include_router(content.router, prefix='/content', tags=['gui','content'])
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.get('/favicon.ico')
 def favicon():

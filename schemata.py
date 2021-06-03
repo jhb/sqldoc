@@ -5,7 +5,7 @@ from pprint import pprint
 from typing import Union, Any
 
 import pytest
-
+# 1
 class ValidationError(Exception):
 
     def __repr__(self):
@@ -153,9 +153,11 @@ def registry()->Registry:
     r.add('age', int)
     r.add('street', str)
     r.add('city', str)
+    r.add('tags',list)
     r.add('address', ('street', 'city'))
     r.add('person', ('name', 'address'))
     r.add('home_adress','address')
+
     return r
 
 @pytest.fixture
@@ -169,7 +171,8 @@ def sampledata():
                 address=dict(city='Bielefeld',
                              street='rightstreet'),
                 third_address=dict(city='Leipzig',
-                                   foo='bar'))
+                                   foo='bar'),
+                tags = ['foo','bar'])
 
 @pytest.fixture
 def no_address(sampledata):
@@ -177,7 +180,8 @@ def no_address(sampledata):
     return data
 
 @pytest.mark.parametrize('key,expectation',[('person',True),
-                                            ('address',False)])
+                                            ('address',False),
+                                            ('tags',True)])
 def test_matches_schema(registry,sampledata,key,expectation):
     result =  registry.matches_schema(sampledata,key) == expectation
     assert result
